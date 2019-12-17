@@ -36,3 +36,27 @@ add_executable(OGL01 01/01.cpp)
 target_link_libraries(OGL01
 	${ALL_LIBS}
 )
+
+add_executable(OGL02
+	02/02.cpp
+	util/LoadShaders.cpp
+	util/LoadShaders.hpp
+	
+	02/FragmentShader.glsl
+	02/VertexShader.glsl
+)
+target_link_libraries(OGL02
+	${ALL_LIBS}
+)
+
+add_executable(OGL03
+	03/03.cpp
+	util/LoadShaders.cpp
+	util/LoadShaders.hpp
+	
+	03/FragmentShader.glsl
+	03/VertexShader.glsl
+)
+target_link_libraries(OGL03
+	${ALL_LIBS}
+)

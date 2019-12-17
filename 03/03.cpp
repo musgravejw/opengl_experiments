@@ -3,7 +3,9 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
 
@@ -26,7 +28,7 @@ int main() {
 
 	// Open a window and create its OpenGL context
 	GLFWwindow* window; // (In the accompanying source code, this variable is global for simplicity)
-	window = glfwCreateWindow(1024, 768, "OpenGL 02", NULL, NULL);
+	window = glfwCreateWindow(1024, 768, "OpenGL 03", NULL, NULL);
 
 	if (window == NULL) {
 	    fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
@@ -53,7 +55,28 @@ int main() {
 	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
-	GLuint programID = LoadShaders( "../02/VertexShader.glsl", "../02/FragmentShader.glsl" );
+	GLuint programID = LoadShaders( "../03/VertexShader.glsl", "../03/FragmentShader.glsl" );
+
+	// Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+	mat4 Projection = perspective(radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
+
+	// Or, for an ortho camera :
+	//glm::mat4 Projection = glm::ortho(-10.0f,10.0f,-10.0f,10.0f,0.0f,100.0f); // In world coordinates
+	
+	// Camera matrix
+	mat4 View       = lookAt(
+								vec3(4,3,3), // Camera is at (4,3,3), in World Space
+								vec3(0,0,0), // and looks at the origin
+								vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+						   );
+	// Model matrix : an identity matrix (model will be at the origin)
+	mat4 Model      = mat4(1.0f);
+	// Our ModelViewProjection : multiplication of our 3 matrices
+	mat4 MVP        = Projection * View * Model; // Remember, matrix multiplication is the other way around
+
+	// Get a handle for our "MVP" uniform
+	// Only during the initialisation
+	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 
 	// draw 3 points in z,y,x
 	// 0,0 is middle of screen
@@ -72,8 +95,18 @@ int main() {
 	// Give our vertices to OpenGL.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
+	// If w == 1, then the vector (x,y,z,1) is a position in space.
+    // If w == 0, then the vector (x,y,z,0) is a direction.
+
 	do {
 	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	    // Use our shader
+		glUseProgram(programID);
+
+		// Send our transformation to the currently bound shader, 
+		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
 	    // 1st attribute buffer : vertices
 		glEnableVertexAttribArray(0);
@@ -87,9 +120,6 @@ int main() {
 		   (void*)0            // array buffer offset
 		);
 
-		// Use our shader
-		glUseProgram(programID);
-
 		// Draw the triangle !
 		glDrawArrays(GL_TRIANGLES, 0, 3); // Starting from vertex 0; 3 vertices total -> 1 triangle
 		glDisableVertexAttribArray(0);
@@ -102,10 +132,10 @@ int main() {
 	while(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
 	       glfwWindowShouldClose(window) == 0);
 
-	// Cleanup VBO
+	// Cleanup VBO and shader
 	glDeleteBuffers(1, &vertexbuffer);
-	glDeleteVertexArrays(1, &VertexArrayID);
 	glDeleteProgram(programID);
+	glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
